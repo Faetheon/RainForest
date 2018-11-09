@@ -2,7 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const Sequelize = require('sequelize');
+const cors = require('cors');
 
+const environment = process.env.NODE_ENV || 'development';
+const configuration = require(__dirname + '/../knexfile.js')[environment];
+const database = require('knex')(configuration);
 const rpUrl = process.env.RECOMMENDED_PRODUCTS_URL;
 const dbUrl = process.env.DB_URL;
 
@@ -19,11 +23,7 @@ const app = express();
 const PORT = 3001;
 
 app.use(express.static(__dirname + '/../react-client/dist'));
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -42,6 +42,60 @@ app.get('/products', (req, res) => {
     })
     .catch(err => {
       if (err) throw err;
+    });
+});
+
+app.get('/api/reviews', (req, res) => {
+  database('customer_review').select()
+    .then(reviews => {
+      res.status(200).json(reviews);
+    })
+    .catch(err => {
+      res.status(500).json({
+        error
+      });
+    });
+});
+
+app.get('/api/reviews/:productid', (req, res) => {
+  let productid = req.params.productid;
+  database('customer_review').where({
+      product_id: productid
+    }).orderBy('helpful_count', 'desc').limit(10).select()
+    .then(reviews => {
+      res.status(200).json(reviews);
+    })
+    .catch(error => {
+      res.status(500).json({
+        error
+      });
+    });
+});
+
+app.get('/api/images', (req, res) => {
+  database('customer_review_images').select()
+    .then(images => {
+      res.status(200).json(images);
+    })
+    .catch(err => {
+      res.status(500).json({
+        err
+      });
+    });
+});
+
+app.get('/api/images/reviewId', (req, res) => {
+  let reviewId = req.params.reviewId;
+  database('customer_review_images').where({
+      review_id: reviewId
+    }).select()
+    .then(images => {
+      res.status(200).json(images);
+    })
+    .catch(err => {
+      res.status(500).json({
+        err
+      });
     });
 });
 
